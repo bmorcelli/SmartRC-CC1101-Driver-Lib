@@ -306,7 +306,7 @@ byte ELECHOUSE_CC1101::SpiReadStatus(byte addr)
 ****************************************************************/
 void ELECHOUSE_CC1101::setSpi(void){
   //Serial.println("Pins set?: " + __spi ? "true":"false");
-  if (__spi == 0){
+if (__spi == 0){
   #if defined __AVR_ATmega168__ || defined __AVR_ATmega328P__
   SCK_PIN = 13; MISO_PIN = 12; MOSI_PIN = 11; SS_PIN = 10;
   #elif defined __AVR_ATmega1280__ || defined __AVR_ATmega2560__
@@ -319,6 +319,7 @@ void ELECHOUSE_CC1101::setSpi(void){
   SCK_PIN = 13; MISO_PIN = 12; MOSI_PIN = 11; SS_PIN = 10;
   #endif
 }
+if(ccSPI==nullptr) ccSPI=&SPI;
 }
 /****************************************************************
 *FUNCTION NAME:COSTUM SPI
