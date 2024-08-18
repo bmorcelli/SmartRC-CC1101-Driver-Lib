@@ -24,7 +24,7 @@ cc1101 Driver for RC Switch. Mod by Little Satan. With permission to modify and 
 #define   BYTES_IN_RXFIFO   0x7F            //byte number in RXfifo
 #define   max_modul 6
 
-SPIClass ccSPI;
+SPIClass* ccSPI;
 byte modulation = 2;
 byte frend0;
 byte chan = 0;
@@ -93,11 +93,11 @@ void ELECHOUSE_CC1101::SpiStart(void)
   pinMode(SS_PIN, OUTPUT);
 
   // enable SPI
-  #ifdef ESP32
-  ccSPI.begin(SCK_PIN, MISO_PIN, MOSI_PIN, SS_PIN);
-  #else
-  ccSPI.begin();
-  #endif
+  //#ifdef ESP32
+  (*ccSPI).begin(SCK_PIN, MISO_PIN, MOSI_PIN, SS_PIN);
+  //#else
+  //(*ccSPI).begin(SS_PIN);
+  //#endif
 }
 /****************************************************************
 *FUNCTION NAME:SpiEnd
@@ -108,8 +108,8 @@ void ELECHOUSE_CC1101::SpiStart(void)
 void ELECHOUSE_CC1101::SpiEnd(void)
 {
   // disable SPI
-  ccSPI.endTransaction();
-  ccSPI.end();
+  //(*ccSPI).endTransaction();
+  //(*ccSPI).end();
 }
 /****************************************************************
 *FUNCTION NAME: GDO_Set()
@@ -140,13 +140,15 @@ void ELECHOUSE_CC1101::GDO0_Set (void)
 ****************************************************************/
 void ELECHOUSE_CC1101::Reset (void)
 {
+  (*ccSPI).end();
+  SpiStart();
 	digitalWrite(SS_PIN, LOW);
 	delay(1);
 	digitalWrite(SS_PIN, HIGH);
 	delay(1);
 	digitalWrite(SS_PIN, LOW);
 	while(digitalRead(MISO_PIN));
-  ccSPI.transfer(CC1101_SRES);
+  (*ccSPI).transfer(CC1101_SRES);
   while(digitalRead(MISO_PIN));
 	digitalWrite(SS_PIN, HIGH);
 }
@@ -175,12 +177,14 @@ void ELECHOUSE_CC1101::Init(void)
 ****************************************************************/
 void ELECHOUSE_CC1101::SpiWriteReg(byte addr, byte value)
 {
+  (*ccSPI).end();
   SpiStart();
   digitalWrite(SS_PIN, LOW);
   while(digitalRead(MISO_PIN));
-  ccSPI.transfer(addr);
-  ccSPI.transfer(value); 
+  (*ccSPI).transfer(addr);
+  (*ccSPI).transfer(value); 
   digitalWrite(SS_PIN, HIGH);
+  //Serial.println("Write reg addr: 0x" + String(addr,HEX) + "=0x" + String(value,HEX));
   SpiEnd();
 }
 /****************************************************************
@@ -192,15 +196,19 @@ void ELECHOUSE_CC1101::SpiWriteReg(byte addr, byte value)
 void ELECHOUSE_CC1101::SpiWriteBurstReg(byte addr, byte *buffer, byte num)
 {
   byte i, temp;
+  (*ccSPI).end();
   SpiStart();
   temp = addr | WRITE_BURST;
   digitalWrite(SS_PIN, LOW);
   while(digitalRead(MISO_PIN));
-  ccSPI.transfer(temp);
+  (*ccSPI).transfer(temp);
+  //Serial.print("\nWrite burst addr: 0x" + String(temp,HEX) + "=");
   for (i = 0; i < num; i++)
   {
-  ccSPI.transfer(buffer[i]);
+  (*ccSPI).transfer(buffer[i]);
+  //Serial.print(" 0x" + String(buffer[i],HEX));
   }
+  //Serial.println();
   digitalWrite(SS_PIN, HIGH);
   SpiEnd();
 }
@@ -212,11 +220,13 @@ void ELECHOUSE_CC1101::SpiWriteBurstReg(byte addr, byte *buffer, byte num)
 ****************************************************************/
 void ELECHOUSE_CC1101::SpiStrobe(byte strobe)
 {
+  (*ccSPI).end();
   SpiStart();
   digitalWrite(SS_PIN, LOW);
   while(digitalRead(MISO_PIN));
-  ccSPI.transfer(strobe);
+  (*ccSPI).transfer(strobe);
   digitalWrite(SS_PIN, HIGH);
+  //Serial.println("Write Strobe: 0x" + String(strobe,HEX));
   SpiEnd();
 }
 /****************************************************************
@@ -228,14 +238,16 @@ void ELECHOUSE_CC1101::SpiStrobe(byte strobe)
 byte ELECHOUSE_CC1101::SpiReadReg(byte addr) 
 {
   byte temp, value;
+  (*ccSPI).end();
   SpiStart();
   temp = addr| READ_SINGLE;
   digitalWrite(SS_PIN, LOW);
   while(digitalRead(MISO_PIN));
-  ccSPI.transfer(temp);
-  value=ccSPI.transfer(0);
+  (*ccSPI).transfer(temp);
+  value=(*ccSPI).transfer(0);
   digitalWrite(SS_PIN, HIGH);
   SpiEnd();
+  //Serial.println("Reading addr: 0x" + String(addr,HEX) + " = 0x" + String(value,HEX));
   return value;
 }
 
@@ -248,15 +260,19 @@ byte ELECHOUSE_CC1101::SpiReadReg(byte addr)
 void ELECHOUSE_CC1101::SpiReadBurstReg(byte addr, byte *buffer, byte num)
 {
   byte i,temp;
+  (*ccSPI).end();
   SpiStart();
   temp = addr | READ_BURST;
   digitalWrite(SS_PIN, LOW);
+  //Serial.print("\nReading addr: 0x" + String(temp,HEX) + " = ");
   while(digitalRead(MISO_PIN));
-  ccSPI.transfer(temp);
+  (*ccSPI).transfer(temp);
   for(i=0;i<num;i++)
   {
-  buffer[i]=ccSPI.transfer(0);
+  buffer[i]=(*ccSPI).transfer(0);
+  //Serial.print(" " + String(buffer[i],HEX));
   }
+  //Serial.println();
   digitalWrite(SS_PIN, HIGH);
   SpiEnd();
 }
@@ -270,14 +286,16 @@ void ELECHOUSE_CC1101::SpiReadBurstReg(byte addr, byte *buffer, byte num)
 byte ELECHOUSE_CC1101::SpiReadStatus(byte addr) 
 {
   byte value,temp;
+  (*ccSPI).end();
   SpiStart();
   temp = addr | READ_BURST;
   digitalWrite(SS_PIN, LOW);
   while(digitalRead(MISO_PIN));
-  ccSPI.transfer(temp);
-  value=ccSPI.transfer(0);
+  (*ccSPI).transfer(temp);
+  value=(*ccSPI).transfer(0);
   digitalWrite(SS_PIN, HIGH);
   SpiEnd();
+  //Serial.println("Reading Reg addr: 0x" + String(addr,HEX) + " = 0x" + String(value,HEX));
   return value;
 }
 /****************************************************************
@@ -287,6 +305,7 @@ byte ELECHOUSE_CC1101::SpiReadStatus(byte addr)
 *OUTPUT       :none
 ****************************************************************/
 void ELECHOUSE_CC1101::setSpi(void){
+  //Serial.println("Pins set?: " + __spi ? "true":"false");
   if (__spi == 0){
   #if defined __AVR_ATmega168__ || defined __AVR_ATmega328P__
   SCK_PIN = 13; MISO_PIN = 12; MOSI_PIN = 11; SS_PIN = 10;
@@ -307,7 +326,8 @@ void ELECHOUSE_CC1101::setSpi(void){
 *INPUT        :none
 *OUTPUT       :none
 ****************************************************************/
-void ELECHOUSE_CC1101::setSpiPin(byte sck, byte miso, byte mosi, byte ss){
+void ELECHOUSE_CC1101::setSpiPin(byte sck, byte miso, byte mosi, byte ss, SPIClass* SSPI){
+  ccSPI = SSPI;
   __spi = 1;
   SCK_PIN = sck;
   MISO_PIN = miso;
@@ -617,11 +637,15 @@ clb4[1]=e;
 ****************************************************************/
 bool ELECHOUSE_CC1101::getCC1101(void){
 setSpi();
-if (SpiReadStatus(0x31)>0){
+//(*ccSPI).end();
+byte test = SpiReadStatus(0x31);
+Serial.println(test,HEX);
+if (test>0){
 return 1;
 }else{
 return 0;
 }
+
 }
 /****************************************************************
 *FUNCTION NAME:getMode

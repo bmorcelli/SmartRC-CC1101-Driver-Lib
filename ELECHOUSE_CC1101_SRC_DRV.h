@@ -17,7 +17,7 @@ cc1101 Driver for RC Switch. Mod by Little Satan. With permission to modify and 
 #define ELECHOUSE_CC1101_SRC_DRV_h
 
 #include <Arduino.h>
-
+#include <SPI.h>
 //***************************************CC1101 define**************************************************//
 // CC1101 CONFIG REGSITER
 #define CC1101_IOCFG2       0x00        // GDO2 output pin configuration
@@ -130,7 +130,7 @@ private:
 public:
   void Init(void);
   byte SpiReadStatus(byte addr);
-  void setSpiPin(byte sck, byte miso, byte mosi, byte ss);
+  void setSpiPin(byte sck, byte miso, byte mosi, byte ss, SPIClass* SSPI);
   void addSpiPin(byte sck, byte miso, byte mosi, byte ss, byte modul);
   void setGDO(byte gdo0, byte gdo2);
   void setGDO0(byte gdo0);
