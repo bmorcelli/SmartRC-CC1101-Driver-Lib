@@ -638,10 +638,8 @@ clb4[1]=e;
 ****************************************************************/
 bool ELECHOUSE_CC1101::getCC1101(void){
 setSpi();
-//(*ccSPI).end();
-byte test = SpiReadStatus(0x31);
-Serial.println(test,HEX);
-if (test>0){
+int s = SpiReadStatus(0x31);
+if (s>0 && s<0xFF){
 return 1;
 }else{
 return 0;
