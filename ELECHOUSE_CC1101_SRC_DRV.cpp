@@ -13,7 +13,6 @@
 cc1101 Driver for RC Switch. Mod by Little Satan. With permission to modify and publish Wilson Shen (ELECHOUSE).
 ----------------------------------------------------------------------------------------------------------------
 */
-#include <SPI.h>
 #include "ELECHOUSE_CC1101_SRC_DRV.h"
 #include <Arduino.h>
 
@@ -24,7 +23,6 @@ cc1101 Driver for RC Switch. Mod by Little Satan. With permission to modify and 
 #define   BYTES_IN_RXFIFO   0x7F            //byte number in RXfifo
 #define   max_modul 6
 
-SPIClass ccSPI;
 byte modulation = 2;
 byte frend0;
 byte chan = 0;
@@ -79,6 +77,31 @@ uint8_t PA_TABLE_868[10] {0x03,0x17,0x1D,0x26,0x37,0x50,0x86,0xCD,0xC5,0xC0,};  
 //                        -30  -20  -15  -10  -6    0    5    7    10   11
 uint8_t PA_TABLE_915[10] {0x03,0x0E,0x1E,0x27,0x38,0x8E,0x84,0xCC,0xC3,0xC0,};  //900 - 928
 /****************************************************************
+*FUNCTION NAME:setSPIinstance
+*FUNCTION     :Set the SPI Instance to use if needed to share SPI Bus with other devices
+*INPUT        :none
+*OUTPUT       :none
+****************************************************************/
+void ELECHOUSE_CC1101::setSPIinstance(SPIClass* sspi) 
+{
+  // Set the SPI instance to use if needed to share SPI Bus with other devices
+  cc_spi=sspi;
+}
+/****************************************************************
+*FUNCTION NAME:getSPIinstance
+*FUNCTION     :Gives the SPI instance in use by CC1101, if none was set, will set the library SPI instance
+*INPUT        :none
+*OUTPUT       :none
+****************************************************************/
+SPIClass* ELECHOUSE_CC1101::getSPIinstance()
+{
+  if(cc_spi==nullptr) {
+    cc_spi=&_cc_spi;
+  }
+  return cc_spi;
+}
+
+/****************************************************************
 *FUNCTION NAME:SpiStart
 *FUNCTION     :spi communication start
 *INPUT        :none
@@ -86,18 +109,12 @@ uint8_t PA_TABLE_915[10] {0x03,0x0E,0x1E,0x27,0x38,0x8E,0x84,0xCC,0xC3,0xC0,};  
 ****************************************************************/
 void ELECHOUSE_CC1101::SpiStart(void)
 {
-  // initialize the SPI pins
-  pinMode(SCK_PIN, OUTPUT);
-  pinMode(MOSI_PIN, OUTPUT);
-  pinMode(MISO_PIN, INPUT);
-  pinMode(SS_PIN, OUTPUT);
+  //End transaction to ensure openin a new session with the right SPISettings
+  digitalWrite(SS_PIN, HIGH);
+  cc_spi->endTransaction();
+  digitalWrite(SS_PIN, LOW);
+  cc_spi->beginTransaction(SPISettings(2000000, MSBFIRST, SPI_MODE0));
 
-  // enable SPI
-  #ifdef ESP32
-  ccSPI.begin(SCK_PIN, MISO_PIN, MOSI_PIN, SS_PIN);
-  #else
-  ccSPI.begin();
-  #endif
 }
 /****************************************************************
 *FUNCTION NAME:SpiEnd
@@ -108,8 +125,9 @@ void ELECHOUSE_CC1101::SpiStart(void)
 void ELECHOUSE_CC1101::SpiEnd(void)
 {
   // disable SPI
-  ccSPI.endTransaction();
-  ccSPI.end();
+  digitalWrite(SS_PIN, HIGH);
+  cc_spi->endTransaction();
+
 }
 /****************************************************************
 *FUNCTION NAME: GDO_Set()
@@ -146,7 +164,7 @@ void ELECHOUSE_CC1101::Reset (void)
 	delay(1);
 	digitalWrite(SS_PIN, LOW);
 	while(digitalRead(MISO_PIN));
-  ccSPI.transfer(CC1101_SRES);
+  cc_spi->transfer(CC1101_SRES);
   while(digitalRead(MISO_PIN));
 	digitalWrite(SS_PIN, HIGH);
 }
@@ -158,14 +176,19 @@ void ELECHOUSE_CC1101::Reset (void)
 ****************************************************************/
 void ELECHOUSE_CC1101::Init(void)
 {
+  // check if SPI Pins are set
   setSpi();
-  SpiStart();                   //spi initialization
+  pinMode(SS_PIN, OUTPUT);
+  // If there were no different SPI Instance, use This lib instance
+  if(cc_spi==nullptr) {
+    cc_spi=&_cc_spi;
+    cc_spi->begin(SCK_PIN,MISO_PIN,MOSI_PIN);
+  }
+  SpiStart();                   //Start SPI Transaction
   digitalWrite(SS_PIN, HIGH);
-  digitalWrite(SCK_PIN, HIGH);
-  digitalWrite(MOSI_PIN, LOW);
-  Reset();                    //CC1101 reset
-  RegConfigSettings();            //CC1101 register config
-  SpiEnd();
+  Reset();                      //CC1101 reset
+  RegConfigSettings();          //CC1101 register config
+  SpiEnd();                     //Stops SPI Transaction
 }
 /****************************************************************
 *FUNCTION NAME:SpiWriteReg
@@ -176,12 +199,11 @@ void ELECHOUSE_CC1101::Init(void)
 void ELECHOUSE_CC1101::SpiWriteReg(byte addr, byte value)
 {
   SpiStart();
-  digitalWrite(SS_PIN, LOW);
   while(digitalRead(MISO_PIN));
-  ccSPI.transfer(addr);
-  ccSPI.transfer(value); 
-  digitalWrite(SS_PIN, HIGH);
+  cc_spi->transfer(addr);
+  cc_spi->transfer(value); 
   SpiEnd();
+  DEBUG_CC1101("Write reg addr: 0x" + String(addr,HEX) + "=0x" + String(value,HEX));
 }
 /****************************************************************
 *FUNCTION NAME:SpiWriteBurstReg
@@ -194,14 +216,15 @@ void ELECHOUSE_CC1101::SpiWriteBurstReg(byte addr, byte *buffer, byte num)
   byte i, temp;
   SpiStart();
   temp = addr | WRITE_BURST;
-  digitalWrite(SS_PIN, LOW);
   while(digitalRead(MISO_PIN));
-  ccSPI.transfer(temp);
+  DEBUG_CC11012("\nWrite burst addr: 0x" + String(temp,HEX) + "=");
+  cc_spi->transfer(temp);
   for (i = 0; i < num; i++)
   {
-  ccSPI.transfer(buffer[i]);
+  cc_spi->transfer(buffer[i]);
+  DEBUG_CC11012(" 0x" + String(buffer[i],HEX));
   }
-  digitalWrite(SS_PIN, HIGH);
+  DEBUG_CC1101
   SpiEnd();
 }
 /****************************************************************
@@ -213,11 +236,10 @@ void ELECHOUSE_CC1101::SpiWriteBurstReg(byte addr, byte *buffer, byte num)
 void ELECHOUSE_CC1101::SpiStrobe(byte strobe)
 {
   SpiStart();
-  digitalWrite(SS_PIN, LOW);
   while(digitalRead(MISO_PIN));
-  ccSPI.transfer(strobe);
-  digitalWrite(SS_PIN, HIGH);
+  cc_spi->transfer(strobe);
   SpiEnd();
+  DEBUG_CC1101("Write Strobe: 0x" + String(strobe,HEX));
 }
 /****************************************************************
 *FUNCTION NAME:SpiReadReg
@@ -230,12 +252,11 @@ byte ELECHOUSE_CC1101::SpiReadReg(byte addr)
   byte temp, value;
   SpiStart();
   temp = addr| READ_SINGLE;
-  digitalWrite(SS_PIN, LOW);
   while(digitalRead(MISO_PIN));
-  ccSPI.transfer(temp);
-  value=ccSPI.transfer(0);
-  digitalWrite(SS_PIN, HIGH);
+  cc_spi->transfer(temp);
+  value=cc_spi->transfer(0);
   SpiEnd();
+  DEBUG_CC1101("Reading addr: 0x" + String(addr,HEX) + " = 0x" + String(value,HEX));
   return value;
 }
 
@@ -250,14 +271,15 @@ void ELECHOUSE_CC1101::SpiReadBurstReg(byte addr, byte *buffer, byte num)
   byte i,temp;
   SpiStart();
   temp = addr | READ_BURST;
-  digitalWrite(SS_PIN, LOW);
   while(digitalRead(MISO_PIN));
-  ccSPI.transfer(temp);
+  DEBUG_CC11012("\nReading addr: 0x" + String(temp,HEX) + " = ");
+  cc_spi->transfer(temp);
   for(i=0;i<num;i++)
   {
-  buffer[i]=ccSPI.transfer(0);
+  buffer[i]=cc_spi->transfer(0);
+  DEBUG_CC11012(" " + String(buffer[i],HEX));
   }
-  digitalWrite(SS_PIN, HIGH);
+  DEBUG_CC1101
   SpiEnd();
 }
 
@@ -272,12 +294,11 @@ byte ELECHOUSE_CC1101::SpiReadStatus(byte addr)
   byte value,temp;
   SpiStart();
   temp = addr | READ_BURST;
-  digitalWrite(SS_PIN, LOW);
   while(digitalRead(MISO_PIN));
-  ccSPI.transfer(temp);
-  value=ccSPI.transfer(0);
-  digitalWrite(SS_PIN, HIGH);
+  cc_spi->transfer(temp);
+  value=cc_spi->transfer(0);
   SpiEnd();
+  DEBUG_CC1101("Reading Reg addr: 0x" + String(addr,HEX) + " = 0x" + String(value,HEX));
   return value;
 }
 /****************************************************************
@@ -616,11 +637,14 @@ clb4[1]=e;
 *OUTPUT       :none
 ****************************************************************/
 bool ELECHOUSE_CC1101::getCC1101(void){
-setSpi();
-if (SpiReadStatus(0x31)>0){
-return 1;
-}else{
-return 0;
+  setSpi();
+  byte val=SpiReadStatus(0x31);
+  if (val>0){
+    DEBUG_CC1101("getCC1101 result: 0x" + String(val,HEX) + " -> Ok");
+    return 1;
+  }else{
+    DEBUG_CC1101("getCC1101 result: 0x" + String(val,HEX) + " -> Not Found");
+    return 0;
 }
 }
 /****************************************************************

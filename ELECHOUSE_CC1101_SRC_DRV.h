@@ -16,7 +16,22 @@ cc1101 Driver for RC Switch. Mod by Little Satan. With permission to modify and 
 #ifndef ELECHOUSE_CC1101_SRC_DRV_h
 #define ELECHOUSE_CC1101_SRC_DRV_h
 
+//********************* DEBUG Macros  ********************/
+
+// Uncomment line below to have Serial messagens about the transactions
+//#define CC1101_LIB_DEBUG
+#if defined(CC1101_LIB_DEBUG)
+  #define DEBUG_CC1101(var) Serial.println(var);
+  #define DEBUG_CC11012(var) Serial.print(var);
+#else
+  #define DEBUG_CC1101(var) 
+  #define DEBUG_CC11012(var)
+#endif
+
+//********************* DEBUG Macros  ********************/
+
 #include <Arduino.h>
+#include <SPI.h>
 
 //***************************************CC1101 define**************************************************//
 // CC1101 CONFIG REGSITER
@@ -127,9 +142,13 @@ private:
   void Split_MDMCFG1(void);
   void Split_MDMCFG2(void);
   void Split_MDMCFG4(void);
+  SPIClass _cc_spi;
+  SPIClass* cc_spi=nullptr;
 public:
   void Init(void);
   byte SpiReadStatus(byte addr);
+  void setSPIinstance(SPIClass* sspi);
+  SPIClass* getSPIinstance();
   void setSpiPin(byte sck, byte miso, byte mosi, byte ss);
   void addSpiPin(byte sck, byte miso, byte mosi, byte ss, byte modul);
   void setGDO(byte gdo0, byte gdo2);
