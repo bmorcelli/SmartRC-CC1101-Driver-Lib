@@ -81,6 +81,10 @@ The most important functions at a glance:
 
 ELECHOUSE_cc1101.Init();		//Initialize the cc1101. Must be set first!
 
+ELECHOUSE_cc1101.setBeginEndLogic(value)		// Set the same logic of begin and end the SPI instance, like the original state
+
+ELECHOUSE_cc1101.getBeginEndLogic()				// Gives the actual mode of operation
+
 ELECHOUSE_cc1101.setSPIinstance(&spi_instance);	// Used to share SPI bus with other devices (tft, SDCard or other devices)
 												// to share SPI cus with a display (TFT_eSPI), use ELECHOUSE_cc1101.setSPIinstance(&tft.getSPIinstance());
 												// if sharing with TFT_eSPI device, is neede to call some SPI Function to "release" the CC1101, like tft.

@@ -144,9 +144,12 @@ private:
   void Split_MDMCFG4(void);
   SPIClass _cc_spi;
   SPIClass* cc_spi=nullptr;
+  bool _begin_end_logic=false;
 public:
   void Init(void);
   byte SpiReadStatus(byte addr);
+  void setBeginEndLogic(bool state);
+  bool getBeginEndLogic();
   void setSPIinstance(SPIClass* sspi);
   SPIClass* getSPIinstance();
   void setSpiPin(byte sck, byte miso, byte mosi, byte ss);

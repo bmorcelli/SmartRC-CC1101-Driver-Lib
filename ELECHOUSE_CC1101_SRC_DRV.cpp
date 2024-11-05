@@ -76,6 +76,28 @@ uint8_t PA_TABLE_433[8] {0x12,0x0E,0x1D,0x34,0x60,0x84,0xC8,0xC0,};             
 uint8_t PA_TABLE_868[10] {0x03,0x17,0x1D,0x26,0x37,0x50,0x86,0xCD,0xC5,0xC0,};  //779 - 899.99
 //                        -30  -20  -15  -10  -6    0    5    7    10   11
 uint8_t PA_TABLE_915[10] {0x03,0x0E,0x1E,0x27,0x38,0x8E,0x84,0xCC,0xC3,0xC0,};  //900 - 928
+
+/****************************************************************
+*FUNCTION NAME:setBeginEndLogic
+*FUNCTION     :set a new state to Begin/End logic, in this logic SPI class uses SPI.begin(...) and SPI.end() logic for backwards compatibility
+*INPUT        :state: true or false
+*OUTPUT       :none
+****************************************************************/
+  void ELECHOUSE_CC1101::setBeginEndLogic(bool state) {
+    _begin_end_logic = state;
+  }
+
+
+/****************************************************************
+*FUNCTION NAME:getBeginEndLogic
+*FUNCTION     :get the state to Begin/End logic, in this logic SPI class uses SPI.begin(...) and SPI.end() logic for backwards compatibility
+*INPUT        :state: true or false
+*OUTPUT       :none
+****************************************************************/
+  bool ELECHOUSE_CC1101::getBeginEndLogic() {
+    return _begin_end_logic;
+  }
+
 /****************************************************************
 *FUNCTION NAME:setSPIinstance
 *FUNCTION     :Set the SPI Instance to use if needed to share SPI Bus with other devices
@@ -112,8 +134,11 @@ void ELECHOUSE_CC1101::SpiStart(void)
   //End transaction to ensure openin a new session with the right SPISettings
   digitalWrite(SS_PIN, HIGH);
   cc_spi->endTransaction();
+  if(_begin_end_logic) cc_spi->end();
+  if(_begin_end_logic) cc_spi->begin(SCK_PIN,MISO_PIN,MOSI_PIN,SS_PIN);
   digitalWrite(SS_PIN, LOW);
   cc_spi->beginTransaction(SPISettings(2000000, MSBFIRST, SPI_MODE0));
+  
 
 }
 /****************************************************************
@@ -125,8 +150,9 @@ void ELECHOUSE_CC1101::SpiStart(void)
 void ELECHOUSE_CC1101::SpiEnd(void)
 {
   // disable SPI
-  digitalWrite(SS_PIN, HIGH);
   cc_spi->endTransaction();
+  digitalWrite(SS_PIN, HIGH);
+  if(_begin_end_logic) cc_spi->end();
 
 }
 /****************************************************************
@@ -158,6 +184,7 @@ void ELECHOUSE_CC1101::GDO0_Set (void)
 ****************************************************************/
 void ELECHOUSE_CC1101::Reset (void)
 {
+  SpiStart();
 	digitalWrite(SS_PIN, LOW);
 	delay(1);
 	digitalWrite(SS_PIN, HIGH);
@@ -180,10 +207,14 @@ void ELECHOUSE_CC1101::Init(void)
   setSpi();
   pinMode(SS_PIN, OUTPUT);
   // If there were no different SPI Instance, use This lib instance
-  if(cc_spi==nullptr) {
+  if(cc_spi==nullptr || _begin_end_logic) {
+    DEBUG_CC1101("CC1101: Null pointer SPI instance or Begin/end");
+    _begin_end_logic=true;
     cc_spi=&_cc_spi;
-    cc_spi->begin(SCK_PIN,MISO_PIN,MOSI_PIN);
-  }
+    cc_spi->begin(SCK_PIN,MISO_PIN,MOSI_PIN,SS_PIN);
+    delay(1);
+  } else DEBUG_CC1101("CC1101: Using other instance");
+
   SpiStart();                   //Start SPI Transaction
   digitalWrite(SS_PIN, HIGH);
   Reset();                      //CC1101 reset
@@ -224,7 +255,7 @@ void ELECHOUSE_CC1101::SpiWriteBurstReg(byte addr, byte *buffer, byte num)
   cc_spi->transfer(buffer[i]);
   DEBUG_CC11012(" 0x" + String(buffer[i],HEX));
   }
-  DEBUG_CC1101
+  DEBUG_CC1101()
   SpiEnd();
 }
 /****************************************************************
@@ -279,7 +310,7 @@ void ELECHOUSE_CC1101::SpiReadBurstReg(byte addr, byte *buffer, byte num)
   buffer[i]=cc_spi->transfer(0);
   DEBUG_CC11012(" " + String(buffer[i],HEX));
   }
-  DEBUG_CC1101
+  DEBUG_CC1101()
   SpiEnd();
 }
 
