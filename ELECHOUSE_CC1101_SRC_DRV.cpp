@@ -213,7 +213,7 @@ void ELECHOUSE_CC1101::Init(void)
     cc_spi=&_cc_spi;
     cc_spi->begin(SCK_PIN,MISO_PIN,MOSI_PIN,SS_PIN);
     delay(1);
-  } else DEBUG_CC1101("CC1101: Using other instance");
+  } else { DEBUG_CC1101("CC1101: Using other instance"); }
 
   SpiStart();                   //Start SPI Transaction
   digitalWrite(SS_PIN, HIGH);

@@ -24,8 +24,8 @@ cc1101 Driver for RC Switch. Mod by Little Satan. With permission to modify and 
   #define DEBUG_CC1101(var) Serial.println(var);
   #define DEBUG_CC11012(var) Serial.print(var);
 #else
-  #define DEBUG_CC1101(var) 
-  #define DEBUG_CC11012(var)
+  #define DEBUG_CC1101(var) yield();
+  #define DEBUG_CC11012(var) yield();
 #endif
 
 //********************* DEBUG Macros  ********************/
