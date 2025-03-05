@@ -70,7 +70,7 @@ byte clb4[2]= {77,79};
 /****************************************************************/
 uint8_t PA_TABLE[8]     {0x00,0xC0,0x00,0x00,0x00,0x00,0x00,0x00};
 //                       -30  -20  -15  -10   0    5    7    10
-uint8_t PA_TABLE_315[8] {0x12,0x0D,0x1C,0x34,0x51,0x85,0xCB,0xC2,};             //300 - 348
+uint8_t PA_TABLE_315[8] {0x12,0x0D,0x1C,0x34,0x51,0x85,0xCB,0xC2,};             //280 - 348
 uint8_t PA_TABLE_433[8] {0x12,0x0E,0x1D,0x34,0x60,0x84,0xC8,0xC0,};             //387 - 464
 //                        -30  -20  -15  -10  -6    0    5    7    10   12
 uint8_t PA_TABLE_868[10] {0x03,0x17,0x1D,0x26,0x37,0x50,0x86,0xCD,0xC5,0xC0,};  //779 - 899.99
@@ -498,7 +498,7 @@ void ELECHOUSE_CC1101::setPA(int p)
 int a;
 pa = p;
 
-if (MHz >= 300 && MHz <= 348){
+if (MHz >= 280 && MHz <= 348){
 if (pa <= -30){a = PA_TABLE_315[0];}
 else if (pa > -30 && pa <= -20){a = PA_TABLE_315[1];}
 else if (pa > -20 && pa <= -15){a = PA_TABLE_315[2];}
@@ -599,8 +599,8 @@ Calibrate();
 ****************************************************************/
 void ELECHOUSE_CC1101::Calibrate(void){
 
-if (MHz >= 300 && MHz <= 348){
-SpiWriteReg(CC1101_FSCTRL0, map(MHz, 300, 348, clb1[0], clb1[1]));
+if (MHz >= 280 && MHz <= 348){
+SpiWriteReg(CC1101_FSCTRL0, map(MHz, 280, 348, clb1[0], clb1[1]));
 if (MHz < 322.88){SpiWriteReg(CC1101_TEST0,0x0B);}
 else{
 SpiWriteReg(CC1101_TEST0,0x09);
