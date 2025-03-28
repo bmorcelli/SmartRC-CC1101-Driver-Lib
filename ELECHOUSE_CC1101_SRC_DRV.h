@@ -5,8 +5,8 @@
     Version: November 12, 2010
 
   This library is designed to use CC1101/CC1100 module on Arduino platform.
-  CC1101/CC1100 module is an useful wireless module.Using the functions of the 
-  library, you can easily send and receive data by the CC1101/CC1100 module. 
+  CC1101/CC1100 module is an useful wireless module.Using the functions of the
+  library, you can easily send and receive data by the CC1101/CC1100 module.
   Just have fun!
   For the details, please refer to the datasheet of CC1100/CC1101.
 ----------------------------------------------------------------------------------------------------------------
@@ -133,7 +133,8 @@ private:
   void SpiEnd(void);
   void GDO_Set (void);
   void GDO0_Set (void);
-  void Reset (void);
+  bool Reset (void);
+  bool checkMISO(void);
   void setSpi(void);
   void RegConfigSettings(void);
   void Calibrate(void);
@@ -146,7 +147,7 @@ private:
   SPIClass* cc_spi=nullptr;
   bool _begin_end_logic=false;
 public:
-  void Init(void);
+  bool Init(void);
   byte SpiReadStatus(byte addr);
   void setBeginEndLogic(bool state);
   bool getBeginEndLogic();
@@ -184,11 +185,11 @@ public:
   byte CheckReceiveFlag(void);
   byte ReceiveData(byte *rxBuffer);
   bool CheckCRC(void);
-  void SpiStrobe(byte strobe);
-  void SpiWriteReg(byte addr, byte value);
-  void SpiWriteBurstReg(byte addr, byte *buffer, byte num);
+  bool SpiStrobe(byte strobe);
+  bool SpiWriteReg(byte addr, byte value);
+  bool SpiWriteBurstReg(byte addr, byte *buffer, byte num);
   byte SpiReadReg(byte addr);
-  void SpiReadBurstReg(byte addr, byte *buffer, byte num);
+  bool SpiReadBurstReg(byte addr, byte *buffer, byte num);
   void setClb(byte b, byte s, byte e);
   bool getCC1101(void);
   byte getMode(void);
